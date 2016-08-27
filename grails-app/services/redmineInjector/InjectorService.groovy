@@ -4,20 +4,23 @@ import grails.plugins.rest.client.RestBuilder
 import grails.transaction.Transactional
 import org.grails.web.json.JSONObject
 import org.springframework.http.HttpStatus
+import grails.util.Holders
 
 @Transactional
 class InjectorService {
     RestBuilder restClient = new RestBuilder()
+    String redmineUrl = Holders.grailsApplication.config.getProperty('injector.redmineUrl')
+    String gemsbbUrl = Holders.grailsApplication.config.getProperty('injector.gemsbbUrl')
 
     private String getProjectId(Integer id, String name) {
-        def resp = restClient.get("http://localhost:8081/projects/search?externalKey=${id}&tool=Redmine")
+        def resp = restClient.get("${gemsbbUrl}/projects/search?externalKey=${id}&tool=Redmine")
         JSONObject result = resp.json
 
         if(result.size() == 1) {
             return result.id
         }
         else {
-            def rpost = restClient.post('http://localhost:8081/projects') {
+            def rpost = restClient.post('${gemsbbUrl}/projects') {
                 contentType "application/json"
                 json {
                     name = name
@@ -28,7 +31,7 @@ class InjectorService {
     }
 
     private String getPlanId(Integer id) {
-        def resp = restClient.get("http://localhost:8081/plans/search?externalKey=${id}&tool=Redmine")
+        def resp = restClient.get("${gemsbbUrl}/plans/search?externalKey=${id}&tool=Redmine")
         JSONObject result = resp.json
 
         if(result.size() == 1) {
@@ -37,7 +40,7 @@ class InjectorService {
     }
 
     private String getMemberId(Integer id) {
-        def resp = restClient.get("http://localhost:8081/members/search?externalKey=${id}&tool=Redmine")
+        def resp = restClient.get("${gemsbbUrl}/members/search?externalKey=${id}&tool=Redmine")
         JSONObject result = resp.json
 
         if(result.size() == 1) {
@@ -45,8 +48,8 @@ class InjectorService {
         }
         else {
             def apiKey = 'baa9da1d47247ea95bedc425027e7bb30df8f883'
-            def user = restClient.get("http://localhost:8081/users.json?project_id=3&key=${apiKey}").json.user
-            def rpost = restClient.post('http://localhost:8081/members') {
+            def user = restClient.get("${redmineUrl}/users.json?project_id=3&key=${apiKey}").json.user
+            def rpost = restClient.post('${gemsbbUrl}/members') {
                 contentType "application/json"
                 json {
                     name = "${user.firstname} ${user.lastname}"
@@ -83,7 +86,7 @@ class InjectorService {
         //  2.2. Agregar issues a la lista de tareas.
 
         //def resp = restClient.get("http://10.0.2.2:3000/issues.json?project_id=3")
-        def resp = restClient.get("http://localhost:8081/issues.json?project_id=${externalProjectId}")
+        def resp = restClient.get("${redmineUrl}/issues.json?project_id=${externalProjectId}")
         JSONObject result = resp.json
         if(result.issues.size() > 0) {
             def firstIssue = result.issues[0]
@@ -103,7 +106,7 @@ class InjectorService {
             def responsePlan
             println 'planid: ' + planId
             if(planId == null) {
-                responsePlan = restClient.post("http://localhost:8081/plans") {
+                responsePlan = restClient.post("${gemsbbUrl}/plans") {
                     contentType "application/json"
                     json {
                         externalKey = externalProjectId
@@ -114,7 +117,7 @@ class InjectorService {
                 }
             }
             else {
-                responsePlan = restClient.put("http://localhost:8081/plans") {
+                responsePlan = restClient.put("${gemsbbUrl}/plans") {
                     contentType "application/json"
                     json {
                         id = planId
