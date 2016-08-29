@@ -8,24 +8,30 @@ import grails.util.Holders
 
 @Transactional
 class InjectorService {
+    private static String toolName = 'Redmine'
     RestBuilder restClient = new RestBuilder()
     String redmineUrl = Holders.grailsApplication.config.getProperty('injector.redmineUrl')
     String gemsbbUrl = Holders.grailsApplication.config.getProperty('injector.gemsbbUrl')
 
     private String getProjectId(Integer id, String name) {
+        println "Buscando proyecto: ${gemsbbUrl}/projects/search?externalKey=${id}&tool=Redmine"
         def resp = restClient.get("${gemsbbUrl}/projects/search?externalKey=${id}&tool=Redmine")
         JSONObject result = resp.json
 
-        if(result.size() == 1) {
+        if(result.size() == 1 || result.id != null) {
             return result.id
         }
         else {
-            def rpost = restClient.post('${gemsbbUrl}/projects') {
+            println "Post a proyecto: ${gemsbbUrl}/projects"
+            def rpost = restClient.post("${gemsbbUrl}/projects") {
                 contentType "application/json"
-                json {
-                    name = name
-                }
+                json(
+                    externalKey: id,
+                    tool: toolName,
+                    name: name
+                )
             }
+            println rpost.getStatusCode()
             return rpost.json.id
         }
     }
@@ -34,26 +40,35 @@ class InjectorService {
         def resp = restClient.get("${gemsbbUrl}/plans/search?externalKey=${id}&tool=Redmine")
         JSONObject result = resp.json
 
-        if(result.size() == 1) {
+        if(result.size() == 1 || result.id != null) {
             return result.id
         }
     }
 
     private String getMemberId(Integer id) {
+        println "buscando usuario: ${gemsbbUrl}/members/search?externalKey=${id}&tool=Redmine"
         def resp = restClient.get("${gemsbbUrl}/members/search?externalKey=${id}&tool=Redmine")
         JSONObject result = resp.json
 
-        if(result.size() == 1) {
+        println result
+
+        if(result.size() == 1 || result.id != null) {
             return result.id
         }
         else {
+            println "No se encontró usuario con id externo ${id}. Json: ${result}. StatusCode: ${resp.getStatusCode()}"
             def apiKey = 'baa9da1d47247ea95bedc425027e7bb30df8f883'
-            def user = restClient.get("${redmineUrl}/users.json?project_id=3&key=${apiKey}").json.user
-            def rpost = restClient.post('${gemsbbUrl}/members') {
+            def getResponse = restClient.get("${redmineUrl}/users/${id}.json?key=${apiKey}")
+            println getResponse.getStatusCode()
+            def user = getResponse.json.user
+            println "user : ${user}"
+            def rpost = restClient.post("${gemsbbUrl}/members") {
                 contentType "application/json"
                 json {
                     name = "${user.firstname} ${user.lastname}"
                     email = user.mail
+                    externalKey = user.id
+                    tool = InjectorService.toolName
                 }
             }
 
@@ -62,18 +77,18 @@ class InjectorService {
     }
 
     private def getTask(JSONObject issue) {
-        def responsible = null
+        def responsibleId = null
         if(issue.assigned_to != null) {
-            getMemberId(issue.assigned_to.id.toInteger())
+            responsibleId = getMemberId(issue.assigned_to.id.toInteger())
         }
 
         [
-                name: "Task 1",
+                name: issue.subject,
                 startDate: Date.parse('yyyy-MM-dd', issue.start_date),
                 dueDate: Date.parse('yyyy-MM-dd', issue.due_date),
                 status: issue.status.name,
-                responsible: responsible,
-                contributors: ["57b135d78acec62754906455"]
+                responsible: [id: responsibleId],
+                contributors: []
         ]
     }
 
@@ -110,8 +125,8 @@ class InjectorService {
                     contentType "application/json"
                     json {
                         externalKey = externalProjectId
-                        tool = 'Redmine'
-                        project = projectId
+                        tool = InjectorService.toolName
+                        project = [id: projectId]
                         tasks = taskList
                     }
                 }
@@ -122,14 +137,15 @@ class InjectorService {
                     json {
                         id = planId
                         externalKey = externalProjectId
-                        tool = 'Redmine'
-                        project = projectId
+                        tool = InjectorService.toolName
+                        project = [id: projectId]
                         tasks = taskList
                     }
                 }
             }
 
-            if (responsePlan.getStatusCode() != HttpStatus.OK) {
+            if (responsePlan.getStatusCode() != HttpStatus.OK &&
+                responsePlan.getStatusCode() != HttpStatus.CREATED) {
                 throw new Exception("Error al guardar el registro del plan. HttpStatusCode: ${responsePlan.getStatusCode()}")
             }
         }
