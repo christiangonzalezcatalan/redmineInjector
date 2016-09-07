@@ -5,6 +5,7 @@ import grails.transaction.Transactional
 import org.grails.web.json.JSONObject
 import org.springframework.http.HttpStatus
 import grails.util.Holders
+import org.bson.types.ObjectId
 
 @Transactional
 class InjectorService {
@@ -14,7 +15,6 @@ class InjectorService {
     String gemsbbUrl = Holders.grailsApplication.config.getProperty('injector.gemsbbUrl')
 
     private String getProjectId(Integer id, String name) {
-        println "Buscando proyecto: ${gemsbbUrl}/projects/search?externalKey=${id}&tool=Redmine"
         def resp = restClient.get("${gemsbbUrl}/projects/search?externalKey=${id}&tool=Redmine")
         JSONObject result = resp.json
 
@@ -22,7 +22,6 @@ class InjectorService {
             return result.id
         }
         else {
-            println "Post a proyecto: ${gemsbbUrl}/projects"
             def rpost = restClient.post("${gemsbbUrl}/projects") {
                 contentType "application/json"
                 json(
@@ -31,7 +30,6 @@ class InjectorService {
                     name: name
                 )
             }
-            println rpost.getStatusCode()
             return rpost.json.id
         }
     }
@@ -86,6 +84,212 @@ class InjectorService {
         ]
     }
 
+    def getPlanFromBB(String projectId) {
+        println "get ${gemsbbUrl}/plans?projectId=${projectId}"
+        def resp = restClient.get("${gemsbbUrl}/plans?projectId=${projectId}")
+        JSONObject result = resp.json
+
+        println resp.getStatusCode()
+
+        if(result.size() == 1 || result.id != null) {
+            return result
+        }
+    }
+
+    def getTaskFromMap(id, map){
+        def taskId = map.findAll() { key, value -> value == id}
+                        .collect() { key, value -> key }​[0]
+        if(taskId == null) {
+            taskId = new ObjectId().toString()
+            map[taskId] = id
+        }
+        [taskId: taskId]
+    }
+
+    def getMappingFromBB(projectId, tool, entityType) {
+        println "get ${gemsbbUrl}/mappings?projectId=${projectId}&tool=${tool}&entityType=${entityType}"
+        def resp = restClient.get(
+            "${gemsbbUrl}/mappings?projectId=${projectId}&tool=${tool}&entityType=${entityType}")
+
+        if(resp.getStatusCode() == HttpStatus.OK) {
+            JSONObject result = resp.json
+
+            if(result.size() == 1 || result.id != null) {
+                return result
+            }
+        }
+    }
+
+    def getMemberByEmail(redmineUserId) {
+        def resp = restClient.get(
+            "${redmineUrl}/users/${redmineUserId}.json?key=baa9da1d47247ea95bedc425027e7bb30df8f883")
+        JSONObject result = resp.json
+        println "member1 response (${redmineUserId}: ${redmineUrl}/users/${redmineUserId}.json?key=baa9da1d47247ea95bedc425027e7bb30df8f883): ${resp.getStatusCode()} - ${resp.json}"
+
+        if(result.user != null) {
+            def memberResp = restClient.get(
+                "${gemsbbUrl}/members?email=${result.user.mail}")
+            println "memberResp.json: ${memberResp.json}"
+            memberResp.json
+        }
+    }
+
+    /*
+    0. Get proyecto?
+    1- Get plan
+    2- Get mapping
+    3. Get issues
+    4. Put planId
+    5. Put mapping
+    */
+    def injectPlan(String projectId, String externalProjectId) {
+        def plan = getPlanFromBB(projectId)
+        def mapping
+        if(plan != null) {
+            mapping = getMappingFromBB(projectId, 'Redmine', 'Plan')
+        }
+        else {
+            plan = [
+                project: [
+                    id: projectId
+                ],
+                tasks: new LinkedHashMap()
+            ]
+        }
+
+        if(mapping == null) {
+            mapping = [
+                project: [
+                    id: projectId
+                ],
+                tool: 'Redmine',
+                entityType: 'Plan',
+                map: new LinkedHashMap()
+            ]
+        }
+
+        println "mapping: ${mapping}"
+
+        def resp = restClient.get("${redmineUrl}/issues.json?project_id=${externalProjectId}")
+        JSONObject result = resp.json
+        if(result.issues.size() > 0) {
+            def taskList = []
+
+            result.issues.each {
+                def issue = it
+                def responsibleId = null
+                if(issue.assigned_to != null) {
+                    //responsibleId = getMemberId(issue.assigned_to.id.toInteger())
+                    responsibleId = getMemberByEmail(issue.assigned_to.id.toInteger()).id
+                }
+
+                def task = getTaskFromMap(issue.id, mapping.map)
+                task << [
+                    name: issue.subject,
+                    startDate: Date.parse('yyyy-MM-dd', issue.start_date),
+                    dueDate: Date.parse('yyyy-MM-dd', issue.due_date),
+                    status: issue.status.name,
+                    responsible: [id: responsibleId],
+                    contributors: []
+                ]
+                taskList.add(task)
+            }
+
+            def responsePlan
+            if(plan.id == null) {
+                responsePlan = restClient.post("${gemsbbUrl}/plans") {
+                    contentType "application/json"
+                    json {
+                        project = [id: projectId]
+                        tasks = taskList
+                    }
+                }
+            }
+            else {
+                responsePlan = restClient.put("${gemsbbUrl}/plans/${plan.id}") {
+                    contentType "application/json"
+                    json {
+                        id = plan.id
+                        project = [id: projectId]
+                        tasks = taskList
+                    }
+                }
+            }
+            if (responsePlan.getStatusCode() != HttpStatus.OK &&
+                responsePlan.getStatusCode() != HttpStatus.CREATED) {
+                throw new Exception("Error al guardar el registro del plan. HttpStatusCode: ${responsePlan.getStatusCode()}")
+            }
+
+            def responseMapping
+            // Post de mapping
+            if(mapping.id == null) {
+                responseMapping = restClient.post("${gemsbbUrl}/projects/${projectId}/mappings") {
+                    contentType "application/json"
+                    json {
+                        project = mapping.project
+                        tool = mapping.tool
+                        entityType = mapping.entityType
+                        externalId = responsePlan.json.id
+                        map = mapping.map
+                    }
+                }
+            }
+            // Put de mapping
+            else {
+                responsePlan = restClient.put("${gemsbbUrl}/projects/${projectId}/mappings/${mapping.id}") {
+                    contentType "application/json"
+                    json {
+                        id = mapping.id
+                        project = mapping.project
+                        tool = mapping.tool
+                        entityType = mapping.entityType
+                        externalId = responsePlan.json.id
+                        map = mapping.map
+                    }
+                }
+            }
+
+            println responseMapping.getStatusCode()
+        }
+
+        /*def resp = restClient.get("${redmineUrl}/issues.json?project_id=${externalProjectId}")
+        JSONObject result = resp.json
+        if(result.issues.size() > 0) {
+            def taskList = []
+
+            result.issues.each {
+                taskList.add(buildTask(it))
+            }
+
+            def responsePlan
+            if(plan.id == null) {
+                responsePlan = restClient.post("${gemsbbUrl}/plans") {
+                    contentType "application/json"
+                    json {
+                        project = [id: projectId]
+                        tasks = taskList
+                    }
+                }
+            }
+            else {
+                responsePlan = restClient.put("${gemsbbUrl}/plans/${planId}") {
+                    contentType "application/json"
+                    json {
+                        id = planId
+                        externalKey = externalProjectId
+                        tool = InjectorService.toolName
+                        project = [id: projectId]
+                        tasks = taskList
+                    }
+                }
+            }
+
+            if (responsePlan.getStatusCode() != HttpStatus.OK &&
+                responsePlan.getStatusCode() != HttpStatus.CREATED) {
+                throw new Exception("Error al guardar el registro del plan. HttpStatusCode: ${responsePlan.getStatusCode()}")
+            }
+        }*/
+    }
 
     def injectProjectPlan(Integer externalProjectId) {
         def resp = restClient.get("${redmineUrl}/issues.json?project_id=${externalProjectId}")
