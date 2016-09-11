@@ -3,7 +3,14 @@ package redmineInjector
 import static org.mockserver.integration.ClientAndServer.startClientAndServer
 import static org.mockserver.model.HttpRequest.request
 import static org.mockserver.model.HttpResponse.response
-import static redmineInjector.Mocks.RedmineResponses.listarRegistrosPlan
+
+import static redmineInjector.Mocks.BlackboardResponses.getPlanFromBlackboard
+import static redmineInjector.Mocks.BlackboardResponses.getPlanMappingsFromBlackboard
+import static redmineInjector.Mocks.BlackboardResponses.getMemberByEmailFromBlackboard
+import static redmineInjector.Mocks.BlackboardResponses.postPlanToBlackbord
+
+import static redmineInjector.Mocks.RedmineResponses.getIssuesFromRedmine
+import static redmineInjector.Mocks.RedmineResponses.getUserFromRedmine
 import static redmineInjector.Mocks.RedmineResponses.listarRegistrosHorasTrabajadas
 import static redmineInjector.Mocks.RedmineResponses.obtenerIssue
 
@@ -38,6 +45,92 @@ class InjectorServiceSpec extends Specification {
     }
 
     void 'test inject plan'() {
+        setup:
+        def projectId = '57cc59368acec62bf2f7d7ed'
+        def redmineProjectId = '3'
+        def redmineKey = 'baa9da1d47247ea95bedc425027e7bb30df8f883'
+
+        mockServer.when(
+                request('/plans')
+                        .withMethod('GET')
+                        .withQueryStringParameters(new Parameter('projectId', projectId))
+        ).respond(response(getPlanFromBlackboard())
+                .withStatusCode(200)
+                .withHeaders(new Header('Content-Type', 'application/json; charset=utf-8'))
+        )
+
+        mockServer.when(
+                request("/projects/${projectId}/mappings")
+                        .withMethod('GET')
+                        .withQueryStringParameters(new Parameter('tool', 'Redmine'))
+                        .withQueryStringParameters(new Parameter('entityType', 'Plan'))
+        ).respond(response(getPlanMappingsFromBlackboard())
+                .withStatusCode(200)
+                .withHeaders(new Header('Content-Type', 'application/json; charset=utf-8'))
+        )
+
+        mockServer.when(
+                request('/issues.json')
+                        .withMethod('GET')
+                        .withQueryStringParameters(new Parameter('project_id', redmineProjectId))
+        ).respond(response(getIssuesFromRedmine())
+                .withStatusCode(200)
+                .withHeaders(new Header('Content-Type', 'application/json; charset=utf-8'))
+        )
+
+        // "${redmineUrl}/users/${redmineUserId}.json?key=baa9da1d47247ea95bedc425027e7bb30df8f883")
+        mockServer.when(
+                request('/users/3.json')
+                        .withMethod('GET')
+                        .withQueryStringParameters(new Parameter('key', redmineKey))
+        ).respond(response(getUserFromRedmine(3))
+                .withStatusCode(200)
+                .withHeaders(new Header('Content-Type', 'application/json; charset=utf-8'))
+        )
+        mockServer.when(
+                request('/users/4.json')
+                        .withMethod('GET')
+                        .withQueryStringParameters(new Parameter('key', redmineKey))
+        ).respond(response(getUserFromRedmine(4))
+                .withStatusCode(200)
+                .withHeaders(new Header('Content-Type', 'application/json; charset=utf-8'))
+        )
+        // "${gemsbbUrl}/members?email=${result.user.mail}")
+        mockServer.when(
+                request('/members')
+                        .withMethod('GET')
+                        .withQueryStringParameters(new Parameter('email', 'christiangonzalezcatalan@hotmail.com'))
+        ).respond(response(getMemberByEmailFromBlackboard("57c3c4858acec662dab6dcf4",
+                            "christiangonzalezcatalan@hotmail.com",
+                            "Christian González"))
+                .withStatusCode(200)
+                .withHeaders(new Header('Content-Type', 'application/json; charset=utf-8'))
+        )
+        mockServer.when(
+            request('/members')
+                    .withMethod('GET')
+                    .withQueryStringParameters(new Parameter('email', 'jperez@miempresita.cl'))
+        ).respond(response(getMemberByEmailFromBlackboard("57c3c4838acec662dab6dcf2",
+                            "jperez@miempresita.cl",
+                            "Juan Pérez"))
+                .withStatusCode(200)
+                .withHeaders(new Header('Content-Type', 'application/json; charset=utf-8'))
+        )
+        mockServer.when(
+            request('/plans/57cf835f8acec65eba3b579f')
+            .withMethod('PUT')
+        ).respond(response(postPlanToBlackbord())
+                .withStatusCode(200)
+                .withHeaders(new Header('Content-Type', 'application/json; charset=utf-8'))
+        )
+        mockServer.when(
+                request("/projects/${projectId}/mappings/57d0c86c8acec66d7306700d")
+                        .withMethod('PUT')
+        ).respond(response(getPlanMappingsFromBlackboard())
+                .withStatusCode(200)
+                .withHeaders(new Header('Content-Type', 'application/json; charset=utf-8'))
+        )
+
         when:
         service.injectPlan("57cc59368acec62bf2f7d7ed", "3")
 

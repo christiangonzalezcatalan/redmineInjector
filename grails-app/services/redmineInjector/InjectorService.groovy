@@ -36,6 +36,11 @@ class InjectorService {
 
     private String getPlanId(Integer id) {
         def resp = restClient.get("${gemsbbUrl}/plans/search?externalKey=${id}&tool=Redmine")
+
+        if(resp.getStatusCode() != HttpStatus.OK) {
+            throw new Exception("Error al obtener el registro del plan. HttpStatusCode: ${resp.getStatusCode()}")
+        }
+
         JSONObject result = resp.json
 
         if(result.size() == 1 || result.id != null) {
@@ -45,6 +50,10 @@ class InjectorService {
 
     private String getMemberId(Integer id) {
         def resp = restClient.get("${gemsbbUrl}/members/search?externalKey=${id}&tool=Redmine")
+        if(resp.getStatusCode() != HttpStatus.OK) {
+            throw new Exception("Error al obtener el miembro del blackboard. HttpStatusCode: ${resp.getStatusCode()}")
+        }
+
         JSONObject result = resp.json
 
         if(result.size() == 1 || result.id != null) {
@@ -53,6 +62,11 @@ class InjectorService {
         else {
             def apiKey = 'baa9da1d47247ea95bedc425027e7bb30df8f883'
             def getResponse = restClient.get("${redmineUrl}/users/${id}.json?key=${apiKey}")
+
+            if(getResponse.getStatusCode() != HttpStatus.OK) {
+                throw new Exception("Error al obtener el usuario Redmine. HttpStatusCode: ${getResponse.getStatusCode()}")
+            }
+
             def user = getResponse.json.user
             def rpost = restClient.post("${gemsbbUrl}/members") {
                 contentType "application/json"
@@ -85,11 +99,13 @@ class InjectorService {
     }
 
     def getPlanFromBB(String projectId) {
-        println "get ${gemsbbUrl}/plans?projectId=${projectId}"
         def resp = restClient.get("${gemsbbUrl}/plans?projectId=${projectId}")
-        JSONObject result = resp.json
 
-        println resp.getStatusCode()
+        if(resp.getStatusCode() != HttpStatus.OK) {
+            throw new Exception("Error al obtener el registro del plan del Blackboard. HttpStatusCode: ${resp.getStatusCode()}")
+        }
+
+        JSONObject result = resp.json
 
         if(result.size() == 1 || result.id != null) {
             return result
@@ -97,8 +113,9 @@ class InjectorService {
     }
 
     def getTaskFromMap(id, map){
-        def taskId = map.findAll() { key, value -> value == id}
-                        .collect() { key, value -> key }​[0]
+        def taskId = map.findAll() { key, value -> value == id }
+                        .collect() { key, value -> key }[0]
+
         if(taskId == null) {
             taskId = new ObjectId().toString()
             map[taskId] = id
@@ -107,29 +124,33 @@ class InjectorService {
     }
 
     def getMappingFromBB(projectId, tool, entityType) {
-        println "get ${gemsbbUrl}/mappings?projectId=${projectId}&tool=${tool}&entityType=${entityType}"
         def resp = restClient.get(
-            "${gemsbbUrl}/mappings?projectId=${projectId}&tool=${tool}&entityType=${entityType}")
+            "${gemsbbUrl}/projects/${projectId}/mappings?tool=${tool}&entityType=${entityType}")
 
-        if(resp.getStatusCode() == HttpStatus.OK) {
-            JSONObject result = resp.json
+        if(resp.getStatusCode() != HttpStatus.OK) {
+            throw new Exception("Error al obtener el mapping del plan. HttpStatusCode: ${resp.getStatusCode()}")
+        }
 
-            if(result.size() == 1 || result.id != null) {
-                return result
-            }
+        JSONObject result = resp.json
+
+        if(result.size() == 1 || result.id != null) {
+            return result
         }
     }
 
     def getMemberByEmail(redmineUserId) {
         def resp = restClient.get(
             "${redmineUrl}/users/${redmineUserId}.json?key=baa9da1d47247ea95bedc425027e7bb30df8f883")
+
+        if(resp.getStatusCode() != HttpStatus.OK) {
+            throw new Exception("Error al obtener el usuario de Redmine. HttpStatusCode: ${resp.getStatusCode()}")
+        }
+
         JSONObject result = resp.json
-        println "member1 response (${redmineUserId}: ${redmineUrl}/users/${redmineUserId}.json?key=baa9da1d47247ea95bedc425027e7bb30df8f883): ${resp.getStatusCode()} - ${resp.json}"
 
         if(result.user != null) {
             def memberResp = restClient.get(
                 "${gemsbbUrl}/members?email=${result.user.mail}")
-            println "memberResp.json: ${memberResp.json}"
             memberResp.json
         }
     }
@@ -168,9 +189,12 @@ class InjectorService {
             ]
         }
 
-        println "mapping: ${mapping}"
-
         def resp = restClient.get("${redmineUrl}/issues.json?project_id=${externalProjectId}")
+
+        if(resp.getStatusCode() != HttpStatus.OK) {
+            throw new Exception("Error al obtener los issues de Redmine. HttpStatusCode: ${resp.getStatusCode()}")
+        }
+
         JSONObject result = resp.json
         if(result.issues.size() > 0) {
             def taskList = []
@@ -179,7 +203,6 @@ class InjectorService {
                 def issue = it
                 def responsibleId = null
                 if(issue.assigned_to != null) {
-                    //responsibleId = getMemberId(issue.assigned_to.id.toInteger())
                     responsibleId = getMemberByEmail(issue.assigned_to.id.toInteger()).id
                 }
 
@@ -236,7 +259,7 @@ class InjectorService {
             }
             // Put de mapping
             else {
-                responsePlan = restClient.put("${gemsbbUrl}/projects/${projectId}/mappings/${mapping.id}") {
+                responseMapping = restClient.put("${gemsbbUrl}/projects/${projectId}/mappings/${mapping.id}") {
                     contentType "application/json"
                     json {
                         id = mapping.id
@@ -249,48 +272,14 @@ class InjectorService {
                 }
             }
 
-            println responseMapping.getStatusCode()
+            if (responseMapping.getStatusCode() != HttpStatus.OK &&
+                responseMapping.getStatusCode() != HttpStatus.CREATED) {
+                throw new Exception("Error al guardar el mapping del plan. HttpStatusCode: ${responseMapping.getStatusCode()}")
+            }
         }
-
-        /*def resp = restClient.get("${redmineUrl}/issues.json?project_id=${externalProjectId}")
-        JSONObject result = resp.json
-        if(result.issues.size() > 0) {
-            def taskList = []
-
-            result.issues.each {
-                taskList.add(buildTask(it))
-            }
-
-            def responsePlan
-            if(plan.id == null) {
-                responsePlan = restClient.post("${gemsbbUrl}/plans") {
-                    contentType "application/json"
-                    json {
-                        project = [id: projectId]
-                        tasks = taskList
-                    }
-                }
-            }
-            else {
-                responsePlan = restClient.put("${gemsbbUrl}/plans/${planId}") {
-                    contentType "application/json"
-                    json {
-                        id = planId
-                        externalKey = externalProjectId
-                        tool = InjectorService.toolName
-                        project = [id: projectId]
-                        tasks = taskList
-                    }
-                }
-            }
-
-            if (responsePlan.getStatusCode() != HttpStatus.OK &&
-                responsePlan.getStatusCode() != HttpStatus.CREATED) {
-                throw new Exception("Error al guardar el registro del plan. HttpStatusCode: ${responsePlan.getStatusCode()}")
-            }
-        }*/
     }
 
+    /*
     def injectProjectPlan(Integer externalProjectId) {
         def resp = restClient.get("${redmineUrl}/issues.json?project_id=${externalProjectId}")
         JSONObject result = resp.json
@@ -334,7 +323,7 @@ class InjectorService {
                 throw new Exception("Error al guardar el registro del plan. HttpStatusCode: ${responsePlan.getStatusCode()}")
             }
         }
-    }
+    }*/
 
     private String getTraceId(Integer id) {
         def resp = restClient.get("${gemsbbUrl}/traces/search?externalKey=${id}&tool=Redmine")

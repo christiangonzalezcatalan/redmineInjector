@@ -4,9 +4,43 @@ package redmineInjector.Mocks
  * Created by christian on 27-08-16.
  */
 class RedmineResponses {
-    static String listarRegistrosPlan() {
+    static String getIssuesFromRedmine() {
         """{
   "issues": [
+    {
+      "id": 11,
+      "project": {
+        "id": 3,
+        "name": "Dashboard Gems"
+      },
+      "tracker": {
+        "id": 1,
+        "name": "Bug"
+      },
+      "status": {
+        "id": 2,
+        "name": "In Progress"
+      },
+      "priority": {
+        "id": 2,
+        "name": "Normal"
+      },
+      "author": {
+        "id": 3,
+        "name": "Christian González"
+      },
+      "assigned_to": {
+        "id": 4,
+        "name": "Juan Pérez"
+      },
+      "subject": "Revisión de código",
+      "description": "Revisión de código de acuerdo a buenas prácticas definidas.",
+      "start_date": "2016-08-28",
+      "due_date": "2016-09-13",
+      "done_ratio": 0,
+      "created_on": "2016-08-29T02:24:18Z",
+      "updated_on": "2016-08-29T02:24:18Z"
+    },
     {
       "id": 10,
       "project": {
@@ -26,7 +60,7 @@ class RedmineResponses {
         "name": "Normal"
       },
       "author": {
-        "id": 4,
+        "id": 3,
         "name": "Christian González"
       },
       "subject": "Dashboard",
@@ -57,11 +91,11 @@ class RedmineResponses {
         "name": "High"
       },
       "author": {
-        "id": 4,
+        "id": 3,
         "name": "Christian González"
       },
       "assigned_to": {
-        "id": 4,
+        "id": 3,
         "name": "Christian González"
       },
       "subject": "Inyector plan Redmine",
@@ -92,11 +126,11 @@ class RedmineResponses {
         "name": "High"
       },
       "author": {
-        "id": 4,
+        "id": 3,
         "name": "Christian González"
       },
       "assigned_to": {
-        "id": 4,
+        "id": 3,
         "name": "Christian González"
       },
       "subject": "API Blackboard",
@@ -109,9 +143,25 @@ class RedmineResponses {
       "updated_on": "2016-08-17T02:18:31Z"
     }
   ],
-  "total_count": 3,
+  "total_count": 4,
   "offset": 0,
   "limit": 25
+}"""
+    }
+
+    static String getUserFromRedmine(id) {
+        """{
+  "user": {
+    "id": ${id},
+    "login": "cgonzalez",
+    "firstname": "Christian",
+    "lastname": "González",
+    "mail": "${id==3?'christiangonzalezcatalan@hotmail.com':'jperez@miempresita.cl'}",
+    "created_on": "2015-08-03T03:11:06Z",
+    "last_login_on": "2016-08-19T03:46:40Z",
+    "api_key": "baa9da1d47247ea95bedc425027e7bb30df8f883",
+    "status": 1
+  }
 }"""
     }
 

@@ -23,10 +23,10 @@ environments:
             url: jdbc:h2:mem:devDb;MVCC=TRUE;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
     test:
         injector:
-            #redmineUrl: 'http://localhost:8081'
-            #gemsbbUrl: 'http://localhost:8081'
-            redmineUrl: 'http://10.0.2.2:3000'
-            gemsbbUrl: 'http://localhost:8080'
+            redmineUrl: 'http://localhost:8081'
+            gemsbbUrl: 'http://localhost:8081'
+            #redmineUrl: 'http://10.0.2.2:3000'
+            #gemsbbUrl: 'http://localhost:8080'
         dataSource:
             dbCreate: update
             url: jdbc:h2:mem:testDb;MVCC=TRUE;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
