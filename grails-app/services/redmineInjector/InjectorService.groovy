@@ -281,6 +281,7 @@ class InjectorService {
 
     private def saveBlackboardTrace(trace, projectId, taskTraceList) {
         def responseTrace
+        println trace.id
         if(trace.id == null) {
             responseTrace = restClient.post("${gemsbbUrl}/traces") {
                 contentType "application/json"
@@ -303,7 +304,7 @@ class InjectorService {
 
         if (responseTrace.getStatusCode() != HttpStatus.OK &&
             responseTrace.getStatusCode() != HttpStatus.CREATED) {
-            throw new Exception("Error al guardar el registro del plan. HttpStatusCode: ${responseTrace.getStatusCode()}")
+            throw new Exception("Error al guardar el registro de la traza. HttpStatusCode: ${responseTrace.getStatusCode()}")
         }
 
         responseTrace.json

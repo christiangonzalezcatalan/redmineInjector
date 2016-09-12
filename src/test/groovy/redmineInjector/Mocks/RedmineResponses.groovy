@@ -222,44 +222,121 @@ class RedmineResponses {
 }"""
     }
 
-    static String obtenerIssue()
+    static String getTimeEntriesFromRedmine() {
+        """{
+  "time_entries": [
     {
-      """{
+      "id": 12,
+      "project": {
+        "id": 3,
+        "name": "Dashboard Gems"
+      },
+      "issue": {
+        "id": 11
+      },
+      "user": {
+        "id": 3,
+        "name": "Christian González"
+      },
+      "activity": {
+        "id": 9,
+        "name": "Development"
+      },
+      "hours": 5,
+      "comments": "",
+      "spent_on": "2016-09-11",
+      "created_on": "2016-09-12T00:54:22Z",
+      "updated_on": "2016-09-12T00:54:22Z"
+    },
+    {
+      "id": 10,
+      "project": {
+        "id": 3,
+        "name": "Dashboard Gems"
+      },
+      "issue": {
+        "id": 9
+      },
+      "user": {
+        "id": 3,
+        "name": "Christian González"
+      },
+      "activity": {
+        "id": 9,
+        "name": "Development"
+      },
+      "hours": 3,
+      "comments": "",
+      "spent_on": "2016-08-30",
+      "created_on": "2016-08-30T04:00:20Z",
+      "updated_on": "2016-08-30T04:00:20Z"
+    },
+    {
+      "id": 11,
+      "project": {
+        "id": 3,
+        "name": "Dashboard Gems"
+      },
+      "issue": {
+        "id": 9
+      },
+      "user": {
+        "id": 3,
+        "name": "Christian González"
+      },
+      "activity": {
+        "id": 9,
+        "name": "Development"
+      },
+      "hours": 2,
+      "comments": "",
+      "spent_on": "2016-08-29",
+      "created_on": "2016-08-30T04:03:17Z",
+      "updated_on": "2016-08-30T04:03:17Z"
+    }
+  ],
+  "total_count": 3,
+  "offset": 0,
+  "limit": 25
+}"""
+    }
+
+    static String getIssueFromRedmine(id, subject) {
+        """{
   "issue": {
-    "id": 9,
+    "id": ${id},
     "project": {
       "id": 3,
       "name": "Dashboard Gems"
     },
     "tracker": {
-      "id": 2,
-      "name": "Feature"
+      "id": 1,
+      "name": "Bug"
     },
     "status": {
-      "id": 1,
-      "name": "New"
+      "id": 2,
+      "name": "In Progress"
     },
     "priority": {
-      "id": 3,
-      "name": "High"
+      "id": 2,
+      "name": "Normal"
     },
     "author": {
       "id": 3,
       "name": "Christian González"
     },
     "assigned_to": {
-      "id": 3,
-      "name": "Christian González"
+      "id": 4,
+      "name": "Juan Pérez"
     },
-    "subject": "Inyector plan Redmine",
-    "description": "Carga de un plan de redmine en blackboard.",
-    "start_date": "2016-08-22",
-    "due_date": "2016-08-24",
+    "subject": "${subject}",
+    "description": "Revisión de código de acuerdo a buenas prácticas definidas.",
+    "start_date": "2016-08-28",
+    "due_date": "2016-09-13",
     "done_ratio": 0,
-    "estimated_hours": 10,
     "spent_hours": 5,
-    "created_on": "2016-08-17T02:19:49Z",
-    "updated_on": "2016-08-17T02:21:01Z"
+    "created_on": "2016-08-29T02:24:18Z",
+    "updated_on": "2016-08-29T02:24:18Z"
   }
 }"""
     }
