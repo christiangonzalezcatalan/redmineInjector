@@ -132,7 +132,7 @@ class InjectorServiceSpec extends Specification {
         )
 
         when:
-        service.injectPlan("57cc59368acec62bf2f7d7ed", "3")
+        service.injectPlan(projectId, redmineProjectId)
 
         then:
         1 == 1
@@ -145,6 +145,19 @@ class InjectorServiceSpec extends Specification {
                 ,
                 VerificationTimes.exactly(1)
         )*/
+    }
+
+    void 'test inject trace'() {
+        setup:
+        def projectId = '57cc59368acec62bf2f7d7ed'
+        def redmineProjectId = '3'
+        def redmineKey = 'baa9da1d47247ea95bedc425027e7bb30df8f883'
+
+        when:
+        service.injectProjectTrace(projectId, redmineProjectId)
+
+        then:
+        true
     }
 
     /*

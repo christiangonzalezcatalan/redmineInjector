@@ -64,7 +64,6 @@ class BlackboardResponses {
   {
     "id": "57d0c86c8acec66d7306700d",
     "entityType": "Plan",
-    "externalId": "57cf835f8acec65eba3b579f",
     "map": {
       "57d0c86c8acec6725ee5accf": 11,
       "57d0c86c8acec6725ee5acd0": 10,
