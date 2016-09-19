@@ -270,7 +270,7 @@ class InjectorService {
         if(resp.getStatusCode() != HttpStatus.OK) {
             throw new Exception("Error al obtener la tarea de Redmine. HttpStatusCode: ${resp.getStatusCode()}")
         }
-        resp.json
+        resp.json.issue
     }
 
     private def buildDetail(timeEntry) {
@@ -281,7 +281,6 @@ class InjectorService {
 
     private def saveBlackboardTrace(trace, projectId, taskTraceList) {
         def responseTrace
-        println trace.id
         if(trace.id == null) {
             responseTrace = restClient.post("${gemsbbUrl}/traces") {
                 contentType "application/json"
@@ -328,7 +327,7 @@ class InjectorService {
             def taskTraceMap = new LinkedHashMap()
             redmineTimeEntries.each {
                 if(!taskTraceMap.containsKey(it.issue.id)) {
-                  taskTraceMap[it.issue.id] = [name: getRedmineTaskById(it.issue.id).subject, details: []]
+                    taskTraceMap[it.issue.id] = [name: getRedmineTaskById(it.issue.id).subject, details: []]
                 }
                 taskTraceMap[it.issue.id].details.add(buildDetail(it))
             }

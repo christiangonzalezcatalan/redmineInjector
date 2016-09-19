@@ -49,8 +49,10 @@ class InjectorServiceSpec extends Specification {
 
     void 'test inject plan'() {
         setup:
-        def projectId = '57cc59368acec62bf2f7d7ed'
-        def redmineProjectId = '3'
+        //def projectId = '57cc59368acec62bf2f7d7ed'
+        //def redmineProjectId = '3'
+        def projectId = '57ccad338acec633f77f862e'
+        def redmineProjectId = '2'
         def redmineKey = 'baa9da1d47247ea95bedc425027e7bb30df8f883'
 
         mockServer.when(
@@ -61,7 +63,6 @@ class InjectorServiceSpec extends Specification {
                 .withStatusCode(200)
                 .withHeaders(new Header('Content-Type', 'application/json; charset=utf-8'))
         )
-
         mockServer.when(
                 request("/projects/${projectId}/mappings")
                         .withMethod('GET')
@@ -71,7 +72,6 @@ class InjectorServiceSpec extends Specification {
                 .withStatusCode(200)
                 .withHeaders(new Header('Content-Type', 'application/json; charset=utf-8'))
         )
-
         mockServer.when(
                 request('/issues.json')
                         .withMethod('GET')
@@ -80,8 +80,6 @@ class InjectorServiceSpec extends Specification {
                 .withStatusCode(200)
                 .withHeaders(new Header('Content-Type', 'application/json; charset=utf-8'))
         )
-
-        // "${redmineUrl}/users/${redmineUserId}.json?key=baa9da1d47247ea95bedc425027e7bb30df8f883")
         mockServer.when(
                 request('/users/3.json')
                         .withMethod('GET')
@@ -98,7 +96,6 @@ class InjectorServiceSpec extends Specification {
                 .withStatusCode(200)
                 .withHeaders(new Header('Content-Type', 'application/json; charset=utf-8'))
         )
-        // "${gemsbbUrl}/members?email=${result.user.mail}")
         mockServer.when(
                 request('/members')
                         .withMethod('GET')
@@ -149,8 +146,10 @@ class InjectorServiceSpec extends Specification {
 
     void 'test inject trace'() {
         setup:
-        def projectId = '57cc59368acec62bf2f7d7ed'
-        def redmineProjectId = '3'
+        //def projectId = '57cc59368acec62bf2f7d7ed'
+        //def redmineProjectId = '3'
+        def projectId = '57ccad338acec633f77f862e'
+        def redmineProjectId = '2'
         def redmineKey = 'baa9da1d47247ea95bedc425027e7bb30df8f883'
 
         mockServer.when(
